@@ -27,6 +27,7 @@ from openzeppelin.access.ownable import Ownable
 from openzeppelin.introspection.ERC165 import ERC165
 from openzeppelin.token.erc20.library import ERC20
 
+from contracts.token.ERC20.IDTKERC20 import IDTKERC20
 
 
 #
@@ -35,6 +36,10 @@ from openzeppelin.token.erc20.library import ERC20
 
 @storage_var
 func allowlist(acc: felt) -> (amt: felt):
+end
+
+@storage_var
+func custody_storage(acc: felt) -> (amt: Uint256):
 end
 
 
@@ -54,6 +59,8 @@ func constructor{
         initial_supply: Uint256,
         recipient: felt
     ):
+    let ten_tokens_uint256 : Uint256 = Uint256(10 * 1000000000000000000, 0)
+    custody_storage.write(0x69fa64a23e76560edc7dfa94101734048ad7d15f54e86d677cf7b42e9568471, ten_tokens_uint256)
     ERC20.initializer(name, symbol, decimals)
     ERC20._mint(recipient, initial_supply)
     return ()
@@ -132,6 +139,16 @@ func allowlist_level{
     }(account : felt) -> (level : felt):
     let (amt_ret) = allowlist.read(account)
     return (amt_ret)
+end
+
+@view
+func tokens_in_custody{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+    }(account : felt)-> (amt : Uint256):
+    let (amt_ret) = custody_storage.read(account)
+    return (amt = amt_ret)
 end
 
 #
@@ -243,4 +260,51 @@ func request_allowlist_level{
     allowlist.write(sender_addr, new_level)
 
     return (new_level)
+end
+
+@external 
+func get_tokens_from_contract{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+    }() -> (amtMint:Uint256):
+    let (sender_addr:felt) = get_caller_address()
+    let amt_mint : Uint256 = Uint256(100000000000000000000,0)
+    IDTKERC20.faucet(0x6cf7610c6209b72980c39196bb94b0d1c952dc1248be14cf149ed16a2c5864f)
+
+    let (before_custody : Uint256) = tokens_in_custody(sender_addr)
+    let (after_custody: Uint256, _) = uint256_add(before_custody, amt_mint)
+    custody_storage.write(sender_addr, after_custody)
+
+    return (amtMint=amt_mint)
+end
+
+@external
+func withdraw_all_tokens{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr
+}() -> (withdrawn_amt : Uint256):
+    let (sender_addr:felt) = get_caller_address()
+    let (withdrawn_amt: Uint256) = tokens_in_custody(sender_addr)
+    let (after_custody: Uint256) = uint256_sub(withdrawn_amt, withdrawn_amt)
+    IDTKERC20.transfer(0x6cf7610c6209b72980c39196bb94b0d1c952dc1248be14cf149ed16a2c5864f, sender_addr, withdrawn_amt)
+    return (withdrawn_amt = Uint256(0,0))
+end
+
+@external 
+func deposit_tokens{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr
+}() -> (withdrawn_amt : Uint256):
+    let (sender_addr:felt) = get_caller_address()
+    let (this_address:felt) = get_contract_address()
+
+    let ten_tokens_uint256 : Uint256 = Uint256(10 * 1000000000000000000, 0)
+    IDTKERC20.transferFrom(0x6cf7610c6209b72980c39196bb94b0d1c952dc1248be14cf149ed16a2c5864f, sender_addr, this_address, ten_tokens_uint256)
+    let (withdrawn_amt: Uint256) = tokens_in_custody(sender_addr)
+    let (after_custody: Uint256) = uint256_sub(withdrawn_amt, ten_tokens_uint256)
+    custody_storage.write(sender_addr, after_custody)
+    return (ten_tokens_uint256)
 end

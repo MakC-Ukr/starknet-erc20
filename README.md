@@ -1,3 +1,7 @@
+#### Use following commands to compile and deploy:
+`starknet-compile MyERC20.cairo --output artifacts/MyERC20.json`
+`starknet deploy --contract artifacts/MyERC20.json --inputs 22366701244151160 1331057752 18 770000000000000000000 0 0x06a3b22E6059dd35205B94D2081550d3c9B6D4E59A29aA12D755E4C36bC5378E --network alpha-goerli`
+
 # ERC20 on StarkNet
 
 Welcome! This is an automated workshop that will explain how to deploy an ERC20 token on StarkNet and customize it to perform specific functions. The ERC20 standard is described [here](https://docs.openzeppelin.com/contracts/3.x/api/token/erc20)
