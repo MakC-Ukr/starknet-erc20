@@ -297,14 +297,18 @@ func deposit_tokens{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr
-}() -> (withdrawn_amt : Uint256):
+}(ten_tokens_uint256 : Uint256) -> (withdrawn_amt : Uint256):
     let (sender_addr:felt) = get_caller_address()
     let (this_address:felt) = get_contract_address()
-
-    let ten_tokens_uint256 : Uint256 = Uint256(10 * 1000000000000000000, 0)
+    
     IDTKERC20.transferFrom(0x6cf7610c6209b72980c39196bb94b0d1c952dc1248be14cf149ed16a2c5864f, sender_addr, this_address, ten_tokens_uint256)
-    let (withdrawn_amt: Uint256) = tokens_in_custody(sender_addr)
-    let (after_custody: Uint256) = uint256_sub(withdrawn_amt, ten_tokens_uint256)
-    custody_storage.write(sender_addr, after_custody)
     return (ten_tokens_uint256)
 end
+
+@external 
+func deposit_tracker_token{{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr
+}(ten_tokens_uint256 : Uint256) -> (withdrawn_amt : Uint256):
+    
